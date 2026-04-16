@@ -60,10 +60,12 @@ class CNNLSTMCaptioner:
         max_caption_length: int = 34,
         image_size: tuple[int, int] = (224, 224),
     ) -> None:
-        # Resolve paths relative to index.py/app.py location
-        base_path = Path(__file__).parent.resolve()
-        self.model_path = str(base_path / model_path)
-        self.tokenizer_path = str(base_path / tokenizer_path)
+        # Unified discovery logic: Check local, then script dir, then common Drive paths
+        script_dir = Path(__file__).parent.resolve()
+        drive_path = Path("/content/drive/MyDrive/ImageCaptioner")
+        
+        self.model_path = self._resolve_robust_path(model_path, [script_dir, drive_path])
+        self.tokenizer_path = self._resolve_robust_path(tokenizer_path, [script_dir, drive_path])
         
         self.max_caption_length = max_caption_length
         self.image_size = image_size
@@ -78,6 +80,23 @@ class CNNLSTMCaptioner:
         self._preprocess_input = None
 
         self._load_artifacts()
+
+    def _resolve_robust_path(self, target: str, search_dirs: list[Path]) -> str:
+        """Search for a file in multiple locations, returning the first valid one."""
+        target_path = Path(target)
+        
+        # 1. Handle absolute paths
+        if target_path.is_absolute():
+            return str(target_path) if target_path.exists() else str(target_path)
+            
+        # 2. Search through prioritized directories
+        for base in search_dirs:
+            candidate = (base / target).resolve()
+            if candidate.exists():
+                return str(candidate)
+        
+        # 3. Fallback to first search dir (usually script dir) to trigger standard errors later
+        return str(search_dirs[0] / target)
 
     def _load_artifacts(self) -> None:
         """Load caption model, tokenizer, and matching CNN backbone."""
