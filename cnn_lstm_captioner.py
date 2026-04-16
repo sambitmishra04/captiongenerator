@@ -62,10 +62,20 @@ class CNNLSTMCaptioner:
     ) -> None:
         # Unified discovery logic: Check local, then script dir, then common Drive paths
         script_dir = Path(__file__).parent.resolve()
-        drive_path = Path("/content/drive/MyDrive/ImageCaptioner")
         
-        self.model_path = self._resolve_robust_path(model_path, [script_dir, drive_path])
-        self.tokenizer_path = self._resolve_robust_path(tokenizer_path, [script_dir, drive_path])
+        # We check multiple common names the user might have used for their Drive folder
+        drive_paths = [
+            Path("/content/drive/MyDrive/ImageCaptionProject"),
+            Path("/content/drive/MyDrive/ImageCaptioner"),
+            Path("/content/drive/MyDrive/captiongenerator"),
+            Path("/content/drive/MyDrive/image-caption-generator-master"),
+            Path("/content/drive/MyDrive/"), # as a last resort
+        ]
+        
+        search_dirs = [script_dir] + drive_paths
+        
+        self.model_path = self._resolve_robust_path(model_path, search_dirs)
+        self.tokenizer_path = self._resolve_robust_path(tokenizer_path, search_dirs)
         
         self.max_caption_length = max_caption_length
         self.image_size = image_size
