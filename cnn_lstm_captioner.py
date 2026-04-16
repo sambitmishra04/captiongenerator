@@ -45,6 +45,14 @@ from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
+class ForgivingLSTM(tf.keras.layers.LSTM):
+    """LSTM layer that ignores legacy Keras 2 arguments during Keras 3 loading."""
+    @classmethod
+    def from_config(cls, config):
+        config.pop('time_major', None)  # Remove legacy arg that breaks Keras 3
+        return super().from_config(config)
+
+
 class CNNLSTMCaptioner:
     """Unified interface for CNN + caption-model inference."""
 
@@ -121,7 +129,7 @@ class CNNLSTMCaptioner:
             
             self.lstm_model = tf.keras.models.load_model(
                 self.model_path,
-                custom_objects={'LSTM': tf.keras.layers.LSTM},
+                custom_objects={'LSTM': ForgivingLSTM},
                 compile=False
             )
             self.feature_dim = self._infer_visual_feature_dim()
