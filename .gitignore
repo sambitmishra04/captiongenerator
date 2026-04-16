@@ -1,0 +1,38 @@
+# --- Dataset ---
+# We ignore the 2GB+ Flickr8k dataset to avoid GitHub limits
+flickr8k/
+Flicker8k_Dataset/
+Images/
+captions.txt
+Flickr8k.token.txt
+
+# --- Weights & Large Artifacts ---
+# mymodel.h5 is ~85MB. GitHub warns at 50MB and blocks at 100MB.
+# We ignore it to keep the repo fast. Use Google Drive to sync it to Colab.
+mymodel.h5
+output/
+*.h5
+
+# --- Tokenizer ---
+# tokenizer.pkl is small (~340KB), keeping it is fine, but if you 
+# retrain frequently, you might want to ignore it. 
+# tokenizer.pkl 
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Streamlit ---
+.streamlit/config.toml
+.streamlit/credentials.toml
+
+# --- OS ---
+.DS_Store
+Thumbs.db
