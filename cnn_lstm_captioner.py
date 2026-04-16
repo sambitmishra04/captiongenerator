@@ -1,25 +1,38 @@
 """
-Image caption generation module.
-
-This module wraps the caption model, tokenizer, and visual feature extractor used
-by the Streamlit app. The repo currently contains artifacts from two compatible
-setups:
-
-- VGG16 feature extraction with a 4096-d visual vector
-- MobileNetV2 feature extraction with a 1280-d visual vector
-
-The captioner inspects the loaded caption model and selects the matching CNN
-backbone automatically so inference stays aligned with training.
-"""
-
 from __future__ import annotations
 
+import os
 import pickle
+import sys
+import traceback
+from pathlib import Path
 from typing import Iterable
 
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+
+# --- Compatibility Bridge ---
+# If tokenizer.pkl was saved with standalone 'keras', but we only have 'tensorflow.keras',
+# we must inject the new paths into sys.modules so pickle.load can find them.
+try:
+    import keras.preprocessing.text
+except ImportError:
+    try:
+        from tensorflow.keras.preprocessing import text, sequence
+        # Create a dummy keras module structure
+        class MockModule: pass
+        km = MockModule()
+        km.preprocessing = MockModule()
+        km.preprocessing.text = text
+        km.preprocessing.sequence = sequence
+        sys.modules['keras'] = km
+        sys.modules['keras.preprocessing'] = km.preprocessing
+        sys.modules['keras.preprocessing.text'] = text
+        sys.modules['keras.preprocessing.sequence'] = sequence
+    except ImportError:
+        pass
+# -----------------------------
 from tensorflow.keras.applications.mobilenet_v2 import (
     MobileNetV2,
     preprocess_input as mobilenet_preprocess_input,
@@ -48,8 +61,11 @@ class CNNLSTMCaptioner:
         max_caption_length: int = 34,
         image_size: tuple[int, int] = (224, 224),
     ) -> None:
-        self.model_path = model_path
-        self.tokenizer_path = tokenizer_path
+        # Resolve paths relative to index.py/app.py location
+        base_path = Path(__file__).parent.resolve()
+        self.model_path = str(base_path / model_path)
+        self.tokenizer_path = str(base_path / tokenizer_path)
+        
         self.max_caption_length = max_caption_length
         self.image_size = image_size
         self.errors: list[str] = []
@@ -72,13 +88,17 @@ class CNNLSTMCaptioner:
 
     def _load_lstm_model(self) -> None:
         try:
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"Model file not found at {self.model_path}")
+            
             self.lstm_model = tf.keras.models.load_model(self.model_path)
             self.feature_dim = self._infer_visual_feature_dim()
-        except FileNotFoundError:
-            self.errors.append(f"Caption model file not found: {self.model_path}")
+        except FileNotFoundError as exc:
+            self.errors.append(str(exc))
             self.lstm_model = None
         except Exception as exc:  # pragma: no cover - environment-specific
-            self.errors.append(f"Caption model load failed: {exc}")
+            full_trace = traceback.format_exc()
+            self.errors.append(f"Caption model load failed: {exc}\n\nTraceback:\n{full_trace}")
             self.lstm_model = None
 
     def _infer_visual_feature_dim(self) -> int | None:
