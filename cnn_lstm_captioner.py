@@ -230,6 +230,8 @@ class CNNLSTMCaptioner:
             "backbone": self.backbone_name,
             "feature_dim": self.feature_dim,
             "max_caption_length": self.max_caption_length,
+            "model_path": self.model_path,
+            "tokenizer_path": self.tokenizer_path,
             "errors": list(self.errors),
         }
 

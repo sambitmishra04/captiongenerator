@@ -20,20 +20,33 @@ st.set_page_config(
 )
 
 
+# --- Configuration ---
+with st.sidebar:
+    st.title("Settings")
+    st.info("The app automatically searches for models in your project folder and Google Drive.")
+    manual_model_path = st.text_input("Manual Model Path (Optional)", value="", help="Point to a specific .h5 file if discovery fails.")
+    manual_tokenizer_path = st.text_input("Manual Tokenizer Path (Optional)", value="", help="Point to a specific .pkl file.")
+
 @st.cache_resource
-def load_captioner() -> CNNLSTMCaptioner:
+def load_captioner(m_path: str | None = None, t_path: str | None = None) -> CNNLSTMCaptioner:
+    # Use defaults if manual paths are empty
+    m_p = m_path if m_path and m_path.strip() else "mymodel.h5"
+    t_p = t_path if t_path and t_path.strip() else "tokenizer.pkl"
+    
     return CNNLSTMCaptioner(
-        model_path="mymodel.h5",
-        tokenizer_path="tokenizer.pkl",
+        model_path=m_p,
+        tokenizer_path=t_p,
         max_caption_length=34,
         image_size=(224, 224),
     )
 
 
-captioner = load_captioner()
+captioner = load_captioner(manual_model_path, manual_tokenizer_path)
 runtime = captioner.get_runtime_info()
 backbone_label = (runtime["backbone"] or "unknown").upper()
 feature_dim = runtime["feature_dim"] or "unknown"
+resolved_model_path = runtime.get("model_path", "unknown")
+model_location = "Google Drive" if "drive" in str(resolved_model_path).lower() else "Local Project"
 
 
 st.markdown(
@@ -367,6 +380,7 @@ def render_header() -> None:
                 <div class="metric-chip"><b>Backbone</b> {backbone_label}</div>
                 <div class="metric-chip"><b>Feature Size</b> {feature_dim}</div>
                 <div class="metric-chip"><b>Caption Length</b> {runtime['max_caption_length']} tokens max</div>
+                <div class="metric-chip"><b>Model Source</b> {model_location}</div>
             </div>
         </div>
         """,
