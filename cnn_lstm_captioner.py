@@ -119,7 +119,11 @@ class CNNLSTMCaptioner:
             if not os.path.exists(self.model_path):
                 raise FileNotFoundError(f"Model file not found at {self.model_path}")
             
-            self.lstm_model = tf.keras.models.load_model(self.model_path)
+            self.lstm_model = tf.keras.models.load_model(
+                self.model_path,
+                custom_objects={'LSTM': tf.keras.layers.LSTM},
+                compile=False
+            )
             self.feature_dim = self._infer_visual_feature_dim()
         except FileNotFoundError as exc:
             self.errors.append(str(exc))
